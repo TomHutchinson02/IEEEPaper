@@ -84,8 +84,6 @@ options = trainingOptions('sgdm', ...         %training options
 
 net = trainNetwork(X_train,layers,options); %train network
 
-figure
-plot(net);
 
 YPred = classify(net, X_test); 
 YTest =  imdsTest.Labels;
