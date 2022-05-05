@@ -90,6 +90,15 @@ YTest =  imdsTest.Labels;
 
 accuracy = sum(YPred == YTest)/numel(YTest) %accuracy of network
 
+ind = find(YPred ~= YTest);
+figure; 
+for ii = 1:9
+    subplot(3,3,ii);
+    imagesc(imdsValidation.readimage(ind(ii)));
+    title([num2str(double(YPred(ind(ii)))-1), ' predicted, ', ... 
+        num2str(double(YTest(ind(ii)))-1), ' actual'])
+end
+
 
 
 
