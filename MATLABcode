@@ -1,0 +1,98 @@
+close all;
+clc;
+gpuDevice(1)
+dataLocation = fullfile('dataSet');
+rootFolder = fullfile(dataLocation);
+objectClasses = {'blades' , 'firearms' }; %read in images
+
+imds = imageDatastore(fullfile(rootFolder,objectClasses), 'IncludeSubfolders',true,'LabelSource','foldernames');
+
+imageAugmenter = imageDataAugmenter( ...   %randomly rotate images
+    'RandRotation',[-45,45])
+
+
+
+
+
+
+fracTrainFiles = 0.6; %assign percenatge split 
+fracValFiles = 0.2; 
+fracTestFiles = 0.2;
+[imdsTrain, imdsValidation, imdsTest] = splitEachLabel(imds, fracTrainFiles,fracValFiles, fracTestFiles, 'randomize'); %randomly spit images inro train val and test
+imagesize = [400 400 3]; %specify image size
+
+
+
+X_train = augmentedImageDatastore(imagesize , imdsTrain,'ColorPreprocessing', 'gray2rgb', 'DataAugmentation', imageDataAugmenter);   %add colour proccessing for ai. 'Image augmetion' 
+X_val = augmentedImageDatastore(imagesize , imdsValidation,'ColorPreprocessing', 'gray2rgb');
+X_test = augmentedImageDatastore(imagesize , imdsTest,'ColorPreprocessing', 'gray2rgb');
+
+
+
+layers = [  %layers for ai
+    imageInputLayer(imagesize)
+    
+    convolution2dLayer(5,16, 'Padding','same')
+    batchNormalizationLayer
+    reluLayer
+  
+    maxPooling2dLayer(5,'stride',2)
+    
+    convolution2dLayer(5,16,'Padding','same')
+    batchNormalizationLayer
+    reluLayer
+
+    maxPooling2dLayer(5,'stride',2)
+    
+    convolution2dLayer(5,32,'Padding','same')
+    batchNormalizationLayer
+    reluLayer
+
+    maxPooling2dLayer(5,'stride',2)
+
+    convolution2dLayer(5,64,'Padding','same')
+    batchNormalizationLayer
+    reluLayer
+
+    maxPooling2dLayer(5,'stride',2)
+
+    convolution2dLayer(5,128,'Padding','same')
+    batchNormalizationLayer
+    reluLayer
+
+    maxPooling2dLayer(5,'stride',2)
+
+    fullyConnectedLayer(2)
+    softmaxLayer 
+    classificationLayer  ];
+
+options = trainingOptions('sgdm', ...         %training options
+    'InitialLearnRate',0.0001,...
+    'maxEpochs',100,...
+    'shuffle', 'every-epoch',...
+    'validationData',X_val,...
+    'validationFrequency',6,...
+    'ValidationPatience',20,...
+    'Verbose',false,...
+    'MiniBatchSize',128,...
+    'ExecutionEnvironment','gpu',...
+    'LearnRateDropFactor',0.1, ...
+    'LearnRateDropPeriod',20,...
+    'LearnRateSchedule','piecewise',...
+     'L2Regularization',1e-10, ...
+    'plots','training-progress');
+
+net = trainNetwork(X_train,layers,options); %train network
+
+figure
+plot(net);
+
+YPred = classify(net, X_test); 
+YTest =  imdsTest.Labels;
+
+accuracy = sum(YPred == YTest)/numel(YTest) %accuracy of network
+
+
+
+
+
